@@ -18,6 +18,8 @@
 @property (nonatomic) BOOL crossFade;
 @property (nonatomic) BOOL shiftSlowsAnimation;
 
+@property (nonatomic) NSWindow *prefsWindow;
+
 + (DBPrefsWindowController *)sharedPrefsWindowController;
 + (NSString *)nibName;
 
@@ -25,6 +27,8 @@
 - (void)addFlexibleSpacer;
 - (void)addView:(NSView *)view label:(NSString *)label;
 - (void)addView:(NSView *)view label:(NSString *)label image:(NSImage *)image;
+- (void)addView:(NSView *)view label:(NSString *)label image:(NSImage *)image imageSelected:(NSImage *) imageSelected ;
+-(void) addViewWithoutToolbar:(NSView *) view label:(NSString *) label;
 
 - (void)toggleActivePreferenceView:(NSToolbarItem *)toolbarItem;
 - (void)displayViewForIdentifier:(NSString *)identifier animate:(BOOL)animate;

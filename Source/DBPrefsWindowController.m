@@ -8,6 +8,8 @@
 @property (nonatomic, strong) NSMutableArray *toolbarIdentifiers;
 @property (nonatomic, strong) NSMutableDictionary *toolbarViews;
 @property (nonatomic, strong) NSMutableDictionary *toolbarItems;
+@property (nonatomic, strong) NSMutableDictionary *toolbarSelectedImages;
+@property (nonatomic, strong) NSMutableDictionary *toolbarImages;
 @property (nonatomic, strong) NSViewAnimation *viewAnimation;
 @property (nonatomic, strong) NSView *contentSubview;
 @end
@@ -41,6 +43,8 @@
         self.toolbarIdentifiers = [[NSMutableArray alloc] init];
         self.toolbarViews = [[NSMutableDictionary alloc] init];
         self.toolbarItems = [[NSMutableDictionary alloc] init];
+        self.toolbarImages = [[NSMutableDictionary alloc] init];
+        self.toolbarSelectedImages = [[NSMutableDictionary alloc] init];
 
         // Set up an NSViewAnimation to animate the transitions.
         self.viewAnimation = [[NSViewAnimation alloc] init];
@@ -58,14 +62,14 @@
     // Create a new window to display the preference views.
     // If the developer attached a window to this controller
     // in Interface Builder, it gets replaced with this one.
-    NSWindow *window = 
+    self.prefsWindow =
     [[NSWindow alloc] initWithContentRect:NSMakeRect(0,0,1000,1000)
                                 styleMask:(NSTitledWindowMask |
                                            NSClosableWindowMask |
                                            NSMiniaturizableWindowMask)
                                   backing:NSBackingStoreBuffered
                                     defer:YES];
-    [self setWindow:window];
+    [self setWindow:self.prefsWindow];
     self.contentSubview = [[NSView alloc] initWithFrame:[[[self window] contentView] frame]];
     [self.contentSubview setAutoresizingMask:(NSViewMinYMargin | NSViewWidthSizable)];
     [[[self window] contentView] addSubview:self.contentSubview];
@@ -85,19 +89,41 @@
                               label:(NSString *)label
                               image:(NSImage *)image
                            selector:(SEL)selector {
+    
+    [self addToolbarItemForIdentifier:identifier label:label image:image selectedImage:image selector:selector];
+}
+
+- (void)addToolbarItemForIdentifier:(NSString *)identifier
+                              label:(NSString *)label
+                              image:(NSImage *)image
+                      selectedImage:(NSImage *) selectedImage
+                           selector:(SEL)selector {
     [self.toolbarIdentifiers addObject:identifier];
     
-    NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:identifier];
+    NSToolbarItem *item = (self.toolbarItems)[identifier];
+    if (item == nil){
+        item = [[NSToolbarItem alloc] initWithItemIdentifier:identifier];
+        (self.toolbarItems)[identifier] = item;
+    }
+    
     [item setLabel:label];
     [item setImage:image];
     [item setTarget:self];
     [item setAction:selector];
     
-    (self.toolbarItems)[identifier] = item;
+    
+    (self.toolbarImages)[identifier] = image;
+    (self.toolbarSelectedImages)[identifier] = selectedImage;
 }
 
 - (void)addFlexibleSpacer {
     [self addToolbarItemForIdentifier:NSToolbarFlexibleSpaceItemIdentifier label:nil image:nil selector:nil];
+}
+
+-(void) addViewWithoutToolbar:(NSView *) view label:(NSString *) label{
+    NSString *identifier = [label copy];
+    (self.toolbarViews)[identifier] = view;
+
 }
 
 - (void)addView:(NSView *)view label:(NSString *)label{
@@ -117,6 +143,20 @@
                              selector:@selector(toggleActivePreferenceView:)];
 }
 
+- (void)addView:(NSView *)view label:(NSString *)label image:(NSImage *)image imageSelected:(NSImage *) imageSelected  {
+    if(view == nil){
+        return;
+    }
+	
+    NSString *identifier = [label copy];
+    (self.toolbarViews)[identifier] = view;
+    [self addToolbarItemForIdentifier:identifier
+                                label:label
+                                image:image
+                                selectedImage:imageSelected
+                             selector:@selector(toggleActivePreferenceView:)];
+}
+
 
 #pragma mark -
 #pragma mark Overriding Methods
@@ -128,7 +168,8 @@
     // Clear the last setup and get a fresh one.
     [self.toolbarIdentifiers removeAllObjects];
     [self.toolbarViews removeAllObjects];
-    [self.toolbarItems removeAllObjects];
+    [self.toolbarSelectedImages removeAllObjects];
+    [self.toolbarImages removeAllObjects];
     [self setupToolbar];
 
     if(![_toolbarIdentifiers count]){
@@ -178,9 +219,19 @@
 	[self displayViewForIdentifier:[toolbarItem itemIdentifier] animate:YES];
 }
 
-- (void)displayViewForIdentifier:(NSString *)identifier animate:(BOOL)animate{	
+- (void)displayViewForIdentifier:(NSString *)identifier animate:(BOOL)animate{        
     // Find the view we want to display.
     NSView *newView = (self.toolbarViews)[identifier];
+    
+    
+    //reset for default images
+    for (NSString *ident in self.toolbarIdentifiers){
+        ((NSToolbarItem *)(self.toolbarItems)[ident]).image = (self.toolbarImages)[ident];
+    }
+    
+    NSToolbarItem *item = (self.toolbarItems)[identifier];
+    item.image = (self.toolbarSelectedImages)[identifier];    
+    
 
     // See if there are any visible views.
     NSView *oldView = nil;
